@@ -355,7 +355,8 @@
 (define_mode_iterator MOVE64 [DI DF])
 
 ;; Iterator for sub-32-bit integer modes.
-(define_mode_iterator SHORT [QI HI])
+(define_mode_iterator SHORT_ALL [QI HI])
+(define_mode_iterator SHORT [HI])
 
 (define_mode_iterator SUBDISF [QI HI (HF "(Has_F16)") (OHF "(Has_F16ALT)") SI (SF "(!TARGET_HARD_FLOAT || TARGET_FPREGS_ON_GRREGS)") V2HI (V2HF "(Has_F16)") (V2OHF "(Has_F16ALT)") V4QI])
 (define_mode_iterator SUBDI [QI HI SI])
@@ -837,7 +838,7 @@
 	    (const_int 32))))]
   "(TARGET_MUL||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT"
   {
-        if (Pulp_Cpu) return "p.mulhsu\t%0,%1,%1";
+        if (Pulp_Cpu) return "p.mulhsu\t%0,%2,%1";
         else return "mulhsu\t%0,%2,%1";
   }
   [(set_attr "type" "imul")
@@ -2914,23 +2915,23 @@
   [(set_attr "move_type" "move,load")
    (set_attr "mode" "DI")])
 
-(define_insn_and_split "extend<SHORT:mode><SUPERQI:mode>2"
+(define_insn_and_split "extend<SHORT_ALL:mode><SUPERQI:mode>2"
   [(set (match_operand:SUPERQI 0 "register_operand" "=r,r")
         (sign_extend:SUPERQI
-             (match_operand:SHORT 1 "nonimmediate_operand_exclude_post" "r,m")))]
+             (match_operand:SHORT_ALL 1 "nonimmediate_operand_exclude_post" "r,m")))]
   ""
   {
         switch (which_alternative) {
                 case 0:
-                        if ((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOSEXT) return "p.ext<SHORT:size>s\t%0,%1";
+                        if ((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOSEXT) return "p.ext<SHORT_ALL:size>s\t%0,%1";
                         else return "#";
                 case 1:
                         if ((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG) {
                                 rtx Addr = XEXP(operands[1], 0);
                                 if (GET_CODE(Addr) == PLUS && (GET_CODE(XEXP(Addr, 1)) == REG || GET_CODE(XEXP(Addr, 1)) == SUBREG))
-                                        return "p.l<SHORT:size>\t%0,%1";
+                                        return "p.l<SHORT_ALL:size>\t%0,%1";
                         }
-                        return "l<SHORT:size>\t%0,%1";
+                        return "l<SHORT_ALL:size>\t%0,%1";
                 default: return "";
         }
   }
@@ -2941,7 +2942,7 @@
   operands[0] = gen_lowpart (SImode, operands[0]);
   operands[1] = gen_lowpart (SImode, operands[1]);
   operands[2] = GEN_INT (GET_MODE_BITSIZE (SImode)
-                         - GET_MODE_BITSIZE (<SHORT:MODE>mode));
+                         - GET_MODE_BITSIZE (<SHORT_ALL:MODE>mode));
 }
   [(set_attr "move_type" "shift_shift,load")
    (set_attr "mode" "SI")])
@@ -4468,6 +4469,7 @@
  (set_attr "mode" "SF")]
 )
 
+
 ;; V2HF -> V1SF (high)
 (define_expand "vec_unpacks_hi_v2hf"
   [(set (match_operand:V1SF 0 "register_operand" "=f")
@@ -4555,6 +4557,44 @@
 
 ;; Vector Packing
 
+;; (define_expand "vec_pack_hf_hf_v2hf"
+;;   [(set (match_operand:V2HF 0 "register_operand" "=f")
+;;         (vec_concat:V2HF
+;; 		(match_operand:HF 1 "")
+;; 		(match_operand:HF 2 "")
+;; 	)
+;;    )
+;;   ]
+;;   "TARGET_HARD_FLOAT && Has_F16"
+;;   {
+;; 	rtx R0 = gen_reg_rtx(HFmode);
+;; 	rtx R1 = gen_reg_rtx(HFmode);
+;; 	emit_insn(gen_movhf(R0, operands[1]));
+;; 	emit_insn(gen_movhf(R1, operands[2]));
+;; 	emit_insn(gen_vec_pack_v2hf(operands[0], R0, R1));
+;; 	// DONE;
+;;   }
+;; )
+
+;; (define_expand "vec_pack_ohf_ohf_v2ohf"
+;;   [(set (match_operand:V2OHF 0 "register_operand" "=f")
+;;         (vec_concat:V2OHF
+;; 		(match_operand:OHF 1 "")
+;; 		(match_operand:OHF 2 "")
+;; 	)
+;;    )
+;;   ]
+;;   "TARGET_HARD_FLOAT && Has_F16ALT"
+;;   {
+;; 	rtx R0 = gen_reg_rtx(OHFmode);
+;; 	rtx R1 = gen_reg_rtx(OHFmode);
+;; 	emit_insn(gen_movhf(R0, operands[1]));
+;; 	emit_insn(gen_movhf(R1, operands[2]));
+;; 	emit_insn(gen_vec_pack_v2ohf(operands[0], R0, R1));
+;; 	// DONE;
+;;   }
+;; )
+
 (define_insn "vec_pack_<VMODEALL2:mode>"
   [(set	(match_operand:VMODEALL2 0 "register_operand" "=r")
 	(vec_concat:VMODEALL2
@@ -4633,26 +4673,26 @@
  (set_attr "mode" "SI")]
 )
 
-(define_insn "vec_pack_v4qi_hi_first"
-  [(set	(match_operand:V4QI 0 "register_operand" "=r")
-	(vec_merge:V4QI
-		(vec_concat:V4QI
-			(const_vector:V2QI [(const_int 0) (const_int 0)])
-			(vec_concat:V2QI
-				(match_operand:QI 1 "register_operand" "r")
-				(match_operand:QI 2 "register_operand" "r")
-			)
-		)
-	  	(const_vector:V4QI [(const_int 0) (const_int 0) (const_int 0) (const_int 0)])
-		(const_int 12)
-	)
-   )
-  ]
-  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.packhi.b \t%0,%2,%1 \t# Vector pack of 2 bytes (first), high part"
-[(set_attr "type" "move")
- (set_attr "mode" "SI")]
-)
+;;(define_insn "vec_pack_v4qi_hi_first"
+;;  [(set	(match_operand:V4QI 0 "register_operand" "=r")
+;;	(vec_merge:V4QI
+;;		(vec_concat:V4QI
+;;			(const_vector:V2QI [(const_int 0) (const_int 0)])
+;;			(vec_concat:V2QI
+;;				(match_operand:QI 1 "register_operand" "r")
+;;				(match_operand:QI 2 "register_operand" "r")
+;;			)
+;;		)
+;;	  	(const_vector:V4QI [(const_int 0) (const_int 0) (const_int 0) (const_int 0)])
+;;		(const_int 12)
+;;	)
+;;   )
+;;  ]
+;;  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
+;;  "pv.packhi.b \t%0,%2,%1 \t# Vector pack of 2 bytes (first), high part"
+;;[(set_attr "type" "move")
+;; (set_attr "mode" "SI")]
+;;)
 
 
 (define_expand "vec_pack_v4qi"
@@ -7826,18 +7866,51 @@
   (set_attr "mode" "SI")]
 )
 
+;; (define_insn "set_hwloop_lc"
+;; [(set (match_operand:SI 0 "lc_register_operand" "=k,k")
+;;       (unspec_volatile:SI [(match_operand:SI 1 "general_operand" "r,I")] UNSPECV_LC_SET))
+;;  (use (match_operand:SI 2 "immediate_operand" "I,I"))
+;; ]
+;; ""
+;; "@
+;;  lp.count  \tx%2,%1\t # loop setup, lc set
+;;  lp.counti \tx%2,%1\t # loop setup, lc set"
+;; [(set_attr "type" "move,move")
+;;  (set_attr "mode" "SI")]
+;;)
+
 (define_insn "set_hwloop_lc"
  [(set (match_operand:SI 0 "lc_register_operand" "=k,k")
        (unspec_volatile:SI [(match_operand:SI 1 "general_operand" "r,I")] UNSPECV_LC_SET))
   (use (match_operand:SI 2 "immediate_operand" "I,I"))
  ]
  ""
- "@
-  lp.count  \tx%2,%1\t # loop setup, lc set
-  lp.counti \tx%2,%1\t # loop setup, lc set"
+ { 
+        switch (which_alternative) {
+                case 0: return Hw_Loop_Align?".align 2\n\tlp.count  \tx%2,%1\t # loop setup, lc set":"lp.count  \tx%2,%1\t # loop setup, lc set";
+		case 1: return Hw_Loop_Align?".align 2\n\tlp.counti \tx%2,%1\t # loop setup, lc set":"lp.counti \tx%2,%1\t # loop setup, lc set";
+		default: return "";
+	}
+ }
  [(set_attr "type" "move,move")
   (set_attr "mode" "SI")]
 )
+
+;;(define_insn "set_hwloop_lc_le"
+;; [(set (match_operand:SI 0 "lc_register_operand" "=k,k")
+;;       (unspec_volatile:SI [(match_operand:SI 1 "general_operand" "r,I")] UNSPECV_LC_SET))
+;;  (set (match_operand:SI 2 "le_register_operand" "=t,t")
+;;       (label_ref (match_operand 3 "" "")))
+;;  (use (match_operand:SI 4 "immediate_operand" "I,I"))
+;; ]
+;; ""
+;; "@
+;;  lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set
+;;  lp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set"
+;; [(set_attr "type" "move,move")
+;;  (set_attr "mode" "SI")]
+;;)
+
 
 (define_insn "set_hwloop_lc_le"
  [(set (match_operand:SI 0 "lc_register_operand" "=k,k")
@@ -7847,9 +7920,13 @@
   (use (match_operand:SI 4 "immediate_operand" "I,I"))
  ]
  ""
- "@
-  lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set
-  lp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set"
+{ 
+        switch (which_alternative) {
+  		case 0: return Hw_Loop_Align?".align 2\n\tlp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set":"lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set";
+  		case 1: return Hw_Loop_Align?".align 2\n\tlp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set":"lp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set";
+		default: return "";
+	}
+}
  [(set_attr "type" "move,move")
   (set_attr "mode" "SI")]
 )

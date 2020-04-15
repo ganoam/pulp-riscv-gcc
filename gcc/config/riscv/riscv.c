@@ -371,7 +371,7 @@ static const struct riscv_cpu_info riscv_cpu_info_table[] = {
   { "marsellus1", marsellus1, &rocket_tune_info },
   { "marsellus2", marsellus2, &rocket_tune_info },
   { "marsellus3", marsellus3, &rocket_tune_info },
-  { "rocket", rocket, &rocket_tune_info },
+  { "rocket", marsellus2, &rocket_tune_info },
   { "size", generic, &optimize_size_tune_info },
 };
 
@@ -2496,9 +2496,11 @@ void riscv_expand_vector_init(rtx target, rtx vals)
 	if ((n_elts==2)&&((mode==V2HFmode) || (mode==V2OHFmode) || (mode==V2HImode)))
 		switch (mode) {
 			case V2HFmode:
-				emit_insn(gen_vec_pack_v2hf(target, XVECEXP (vals, 0, 0), XVECEXP (vals, 0, 1))); return;
+				// emit_insn(gen_vec_pack_v2hf(target, XVECEXP (vals, 0, 0), XVECEXP (vals, 0, 1))); return;
+				emit_insn(gen_vec_pack_v2hf(target, copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 0)), copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 1)))); return;
 			case V2OHFmode:
-				emit_insn(gen_vec_pack_v2ohf(target, XVECEXP (vals, 0, 0), XVECEXP (vals, 0, 1))); return;
+				// emit_insn(gen_vec_pack_v2ohf(target, XVECEXP (vals, 0, 0), XVECEXP (vals, 0, 1))); return;
+				emit_insn(gen_vec_pack_v2ohf(target, copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 0)), copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 1)))); return;
 			case V2HImode:
 				emit_insn(gen_vec_pack_v2hi(target, copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 0)), copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, 1)))); return;
 			default: ;
@@ -3948,7 +3950,8 @@ riscv_save_reg_p (unsigned int regno, unsigned int is_it)
                        || df_regs_ever_live_p (regno)
                        || (regno == HARD_FRAME_POINTER_REGNUM
                            && frame_pointer_needed);
-  bool it_rel = is_it && df_regs_ever_live_p(regno) && scan_reg_definitions(regno);
+  // bool it_rel = is_it && df_regs_ever_live_p(regno) && scan_reg_definitions(regno);
+  bool it_rel = is_it && df_regs_ever_live_p(regno); 
   /*
   if ((call_saved && might_clobber)
          || (regno == RETURN_ADDR_REGNUM && crtl->calls_eh_return)
@@ -5562,7 +5565,7 @@ hwloop_optimize (hwloop_info loop)
 					hit_enclosed_end_label = true; break;
 				}
 			}
-			if (hit_enclosed_end_label) {
+			if (hit_enclosed_end_label && MinHWLoopInst) {
 				if (dump_file) {
 					fprintf(dump_file, " Hitting enclose loop end label (enclosed=%d), insn:\n", i->loop_no);
 					fprintf(dump_file, " Adding a nop after it\n");
@@ -5620,7 +5623,7 @@ hwloop_optimize (hwloop_info loop)
 
  	}
 	/* Could use a define containing the min number of inst that always have to be executed at loop tail */
-	if (cnt == 0) {
+	if (MinHWLoopInst && (cnt == 0)) {
   		if (dump_file) {
 			fprintf (dump_file, " Branch to loop tail exist, adding a nop after last_insn\n");
 		}
@@ -5641,11 +5644,11 @@ hwloop_optimize (hwloop_info loop)
       return false;
     }
   /* In all other cases, try to replace a bad last insn with a nop.  */
-  else if (JUMP_P (last_insn)
+  else if (MinHWLoopInst && (JUMP_P (last_insn)
 	   || CALL_P (last_insn)
 	   || recog_memoized (last_insn) == CODE_FOR_simple_return_internal
 	   || GET_CODE (PATTERN (last_insn)) == ASM_INPUT
-	   || asm_noperands (PATTERN (last_insn)) >= 0) {
+	   || asm_noperands (PATTERN (last_insn)) >= 0)) {
       	if (loop->length + 1 > MAX_LOOP_LENGTH) {
 	  	if (dump_file) fprintf (dump_file, ";; loop %d too long\n", loop->loop_no);
 	  	return false;
@@ -5662,7 +5665,7 @@ hwloop_optimize (hwloop_info loop)
   if (loop->length < MIN_LOOP_LENGTH && TARGET_MASK_SLOOP) {
 	Padding = true;
   } else {
-  	while (loop->length < MIN_LOOP_LENGTH) {
+  	while (loop->length < MinHWLoopInst) {
       		last_insn = emit_insn_after (gen_forced_nop (), last_insn);
 		loop->length += 1;
   	}
