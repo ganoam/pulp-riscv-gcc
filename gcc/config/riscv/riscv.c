@@ -371,7 +371,7 @@ static const struct riscv_cpu_info riscv_cpu_info_table[] = {
   { "marsellus1", marsellus1, &rocket_tune_info },
   { "marsellus2", marsellus2, &rocket_tune_info },
   { "marsellus3", marsellus3, &rocket_tune_info },
-  { "rocket", marsellus2, &rocket_tune_info },
+  { "rocket", generic, &rocket_tune_info },
   { "size", generic, &optimize_size_tune_info },
 };
 
@@ -3972,7 +3972,7 @@ riscv_save_reg_p (unsigned int regno, unsigned int is_it)
 static bool
 riscv_use_save_libcall (const struct riscv_frame_info *frame)
 {
-  if (!TARGET_SAVE_RESTORE || crtl->calls_eh_return || frame_pointer_needed  || frame->is_it)
+  if (/*!TARGET_SAVE_RESTORE || */crtl->calls_eh_return || frame_pointer_needed  || frame->is_it)
     return false;
 
   return frame->save_libcall_adjustment != 0;
@@ -4357,6 +4357,92 @@ riscv_first_stack_step (struct riscv_frame_info *frame)
   return max_first_step;
 }
 
+HOST_WIDE_INT
+riscv_get_push_pop_rcount (unsigned mask)
+{
+  HOST_WIDE_INT push_pop_rcount = 1;
+  HOST_WIDE_INT push_pop_rcount_a0 = 14;
+  HOST_WIDE_INT push_pop_rcount_a1 = 15;
+  bool use_a0 = false;
+  bool use_a1 = false;
+
+  if (mask == 0)
+    {
+      return 0;
+    }
+  for (int regno = GP_REG_LAST - 1; regno >= GP_REG_FIRST; regno--)
+    {
+      if (BITSET_P (mask, regno - GP_REG_FIRST))
+	{
+	  if (PUSH_POP_REG (regno))
+ 	    {
+	      if (push_pop_rcount == 1)
+		/* get the real value of push_pop_rcount, so need add 2.  */
+		push_pop_rcount = CALLEE_SAVED_REG_NUMBER (regno)
+							 + 2;
+	    }
+	  else if (PUSH_POP_A0 (regno))
+	    use_a0 = true;
+	  else if (PUSH_POP_A1 (regno))
+	    use_a1 = true;
+	  else
+	    return 0;
+	}
+    }
+  if (use_a0 && !use_a1)
+    return push_pop_rcount_a0;
+  else if (use_a1)
+    return push_pop_rcount_a1;
+  return push_pop_rcount;
+}
+
+const char *
+riscv_output_push (HOST_WIDE_INT push_pop_rcount, HOST_WIDE_INT sp16imm)
+{
+  static char s[32];
+
+  ssize_t bytes = snprintf (s, sizeof (s) - 1 , "push\t%s,-%u",
+			      push_pop_rcount_str[push_pop_rcount], sp16imm);
+  gcc_assert ((size_t) bytes < sizeof (s));
+
+  return s;
+}
+
+const char *
+riscv_output_pop (HOST_WIDE_INT push_pop_rcount, HOST_WIDE_INT sp16imm)
+{
+  static char s[32];
+
+  ssize_t bytes = snprintf (s, sizeof (s) - 1, "pop\t%s,%u",
+			      push_pop_rcount_str[push_pop_rcount], sp16imm);
+  gcc_assert ((size_t) bytes < sizeof (s));
+
+  return s;
+
+}
+
+const char *
+riscv_output_popret (HOST_WIDE_INT push_pop_rcount, HOST_WIDE_INT sp16imm)
+{
+  static char s[32];
+
+  ssize_t bytes = snprintf (s, sizeof (s) - 1, "popret\t%s,%u",
+			      push_pop_rcount_str[push_pop_rcount], sp16imm);
+  gcc_assert ((size_t) bytes < sizeof (s));
+
+  return s;
+
+}
+
+static HOST_WIDE_INT
+riscv_use_push_pop_judge (const struct riscv_frame_info *frame)
+{
+  if (!TARGET_USE_PUSH_POP || crtl->calls_eh_return || frame_pointer_needed)
+    return 0;
+
+  return riscv_get_push_pop_rcount (frame->mask);
+}
+
 static rtx
 riscv_adjust_libcall_cfi_prologue ()
 {
@@ -4395,6 +4481,48 @@ riscv_adjust_libcall_cfi_prologue ()
   return dwarf;
 }
 
+static rtx
+riscv_adjust_push_cfi_prologue (HOST_WIDE_INT push_pop_spimm)
+{
+  rtx dwarf = NULL_RTX;
+  rtx adjust_sp_rtx, reg, mem, insn;
+  int saved_size = cfun->machine->frame.save_libcall_adjustment;
+  int offset;
+  /* Debug info for adjust sp.  */
+  adjust_sp_rtx = gen_add3_insn (stack_pointer_rtx,
+                                 stack_pointer_rtx, GEN_INT (-push_pop_spimm));
+  dwarf = alloc_reg_note (REG_CFA_ADJUST_CFA, adjust_sp_rtx,
+                          dwarf);
+
+
+  for (int regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
+    if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
+      {
+        /* The save order is ra, s0, s1, s2 to s11.  */
+        if (regno == RETURN_ADDR_REGNUM)
+          offset = saved_size - UNITS_PER_WORD;
+        else if (regno == S0_REGNUM)
+          offset = saved_size - UNITS_PER_WORD * 2;
+        else if (regno == S1_REGNUM)
+          offset = saved_size - UNITS_PER_WORD * 3;
+        else
+          offset = saved_size - ((regno - S2_REGNUM + 4) * UNITS_PER_WORD);
+
+
+        reg = gen_rtx_REG (SImode, regno);
+        mem = gen_frame_mem (SImode, plus_constant (Pmode,
+                                                    stack_pointer_rtx,
+                                                    offset));
+
+
+        insn = gen_rtx_SET (mem, reg);
+        dwarf = alloc_reg_note (REG_CFA_OFFSET, insn, dwarf);
+      }
+
+
+  return dwarf;
+}
+
 static void
 riscv_emit_stack_tie (void)
 {
@@ -4412,6 +4540,9 @@ riscv_expand_prologue (void)
   struct riscv_frame_info *frame = &cfun->machine->frame;
   HOST_WIDE_INT size = frame->total_size;
   unsigned mask = frame->mask;
+  HOST_WIDE_INT push_pop_rcount = riscv_use_push_pop_judge (frame);
+  HOST_WIDE_INT push_pop_spimm = 0;
+  HOST_WIDE_INT push_pop_sp16imm = 0;  
   rtx insn;
   static bool Trace=false;
 
@@ -4439,6 +4570,33 @@ riscv_expand_prologue (void)
 
       RTX_FRAME_RELATED_P (insn) = 1;
       REG_NOTES (insn) = dwarf;
+    }
+
+  /* the save_libcall_adjustment is the size for gpr. 
+     undo push when the value is 0.  */
+  else if (push_pop_rcount && frame->save_libcall_adjustment)
+    {
+      /* spimm = 16 * (((N + 3) / 4) + sp16imm) N--the num of register.  */
+      push_pop_spimm = (push_pop_rcount * 4 + 15) / 16;
+      push_pop_spimm = push_pop_spimm * 16;
+      push_pop_sp16imm = (size + 15) / 16 - (push_pop_rcount + 3) / 4;
+      /* the value of sp16imm is between 0 - 32.  */
+      if (frame->fmask == 0 && push_pop_sp16imm >= 0 && push_pop_sp16imm <= 31)
+	{
+	  push_pop_spimm = 16 * (push_pop_sp16imm
+	    			+ (push_pop_rcount + 3) / 4);
+	  insn = emit_insn (gen_riscv_push (GEN_INT (push_pop_rcount),
+					  GEN_INT (push_pop_spimm)));
+	  rtx dwarf = NULL_RTX;
+	  dwarf = riscv_adjust_push_cfi_prologue (push_pop_spimm);
+	  RTX_FRAME_RELATED_P (insn) = 1;
+	  REG_NOTES (insn) = dwarf;
+
+
+          frame->mask = 0;
+          /* One-time push stack.  */
+          size = 0;
+	}
     }
 
   /* Save the registers.  */
@@ -4515,6 +4673,66 @@ riscv_adjust_libcall_cfi_epilogue ()
 
   return dwarf;
 }
+
+static rtx
+riscv_adjust_pop_popret_cfi_epilogue (HOST_WIDE_INT push_pop_spimm)
+{
+  rtx dwarf = NULL_RTX;
+  rtx adjust_sp_rtx, reg;
+
+
+  /* Debug info for adjust sp.  */
+  adjust_sp_rtx = gen_add3_insn (stack_pointer_rtx,
+                                 stack_pointer_rtx, GEN_INT (push_pop_spimm));
+  dwarf = alloc_reg_note (REG_CFA_ADJUST_CFA, adjust_sp_rtx,
+                          dwarf);
+
+
+  for (int regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
+    if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
+      {
+        reg = gen_rtx_REG (SImode, regno);
+        dwarf = alloc_reg_note (REG_CFA_RESTORE, reg, dwarf);
+      }
+
+
+  return dwarf;
+}
+
+
+static void
+riscv_emit_pop_popret_insn (bool sibcall_p, bool riscv_use_push_pop,
+		 HOST_WIDE_INT push_pop_rcount, HOST_WIDE_INT push_pop_spimm,
+		 rtx insn, rtx ra)
+{
+  if (!sibcall_p)
+    {
+      if (riscv_use_push_pop)
+	{
+	  rtx dwarf = riscv_adjust_pop_popret_cfi_epilogue (push_pop_spimm);
+	  insn = emit_insn (gen_riscv_popret (GEN_INT (push_pop_rcount),
+					GEN_INT (push_pop_spimm)));
+
+
+	  RTX_FRAME_RELATED_P (insn) = 1;
+	  REG_NOTES (insn) = dwarf;
+	}
+      else
+      	emit_jump_insn (gen_simple_return_internal (ra));
+    }
+  else if (riscv_use_push_pop)
+    {
+      rtx dwarf = riscv_adjust_pop_popret_cfi_epilogue (push_pop_spimm);
+      insn = emit_insn (gen_riscv_pop (GEN_INT (push_pop_rcount),
+					GEN_INT (push_pop_spimm)));
+
+
+      RTX_FRAME_RELATED_P (insn) = 1;
+      REG_NOTES (insn) = dwarf;
+      return;
+    }
+}
+
 
 /* Used by EPILOGUE_USES() DO WE NEED IT??? */
 int riscv_epilogue_uses(int regno)
@@ -4636,6 +4854,10 @@ riscv_expand_epilogue (bool sibcall_p)
   unsigned mask = frame->mask;
   HOST_WIDE_INT step1 = frame->total_size;
   HOST_WIDE_INT step2 = 0;
+  HOST_WIDE_INT push_pop_rcount = riscv_use_push_pop_judge (frame);
+  HOST_WIDE_INT push_pop_spimm = 0;
+  HOST_WIDE_INT push_pop_sp16imm = 0;
+  bool riscv_use_push_pop = false;  
   bool use_restore_libcall = !sibcall_p && riscv_use_save_libcall (frame);
   rtx ra = gen_rtx_REG (Pmode, RETURN_ADDR_REGNUM);
   rtx insn;
@@ -4704,6 +4926,26 @@ riscv_expand_epilogue (bool sibcall_p)
       step1 -= step2;
     }
 
+  /* undo push when the libcall_adjustment is 0.  */
+  if (push_pop_rcount && frame->save_libcall_adjustment)
+    {
+      riscv_use_push_pop = true;
+
+      /* spimm = 16 * (((N+3) / 4) + sp16imm) N--the num of register.  */
+      push_pop_spimm = (push_pop_rcount * 4 + 15) / 16;
+      push_pop_spimm = push_pop_spimm * 16;
+      gcc_assert (step2 >= frame->save_libcall_adjustment);
+      push_pop_sp16imm = (step2 + 15) / 16 - (push_pop_rcount + 3) / 4;
+      /* the value of sp16imm is between 0 - 32.  */
+      if (frame->fmask == 0 && push_pop_sp16imm >= 0 && push_pop_sp16imm <= 31)
+	{
+	  /* One-time push stack.  */
+	  step1 = 0;
+	  push_pop_spimm = 16 * ((push_pop_rcount + 3) / 4
+				+ push_pop_sp16imm);
+	}
+    }
+
   /* Set TARGET to BASE + STEP1.  */
   if (step1 > 0)
     {
@@ -4732,17 +4974,24 @@ riscv_expand_epilogue (bool sibcall_p)
       REG_NOTES (insn) = dwarf;
     }
 
-  if (use_restore_libcall)
+  if (use_restore_libcall || (riscv_use_push_pop && frame->save_libcall_adjustment))
     frame->mask = 0; /* Temporarily fib that we need not save GPRs.  */
 
   /* Restore the registers.  */
   riscv_for_each_saved_reg (frame->total_size - step2, riscv_restore_reg);
 
-  if (use_restore_libcall)
+  if (use_restore_libcall || (riscv_use_push_pop && frame->save_libcall_adjustment))
     {
       frame->mask = mask; /* Undo the above fib.  */
       gcc_assert (step2 >= frame->save_libcall_adjustment);
       step2 -= frame->save_libcall_adjustment;
+      /* Opcode for sp16imm is 5 bits, the push_pop_sp16imm is 0 - 31.  */
+      if (riscv_use_push_pop && frame->fmask == 0 
+				&& push_pop_sp16imm >= 0 && push_pop_sp16imm <= 31)
+      {
+        step2 = 0;
+      }
+      
     }
 
   if (need_barrier_p)
@@ -4787,7 +5036,9 @@ riscv_expand_epilogue (bool sibcall_p)
               else if (frame->is_it & 0x8) emit_jump_insn (gen_simple_ith_return ());
               else  emit_jump_insn (gen_simple_itm_return ());
       // } else emit_jump_insn (gen_simple_it_return ());
-    } else emit_jump_insn (gen_simple_return_internal (ra));
+    } else // emit_jump_insn (gen_simple_return_internal (ra));
+        riscv_emit_pop_popret_insn (sibcall_p, riscv_use_push_pop,
+ 		 push_pop_rcount, push_pop_spimm, insn, ra);
   }
 }
 
@@ -5312,8 +5563,8 @@ riscv_function_ok_for_sibcall (tree decl ATTRIBUTE_UNUSED,
 {
   if (cfun->machine->is_interrupt) return false;
   /* When optimzing for size, don't use sibcalls in non-leaf routines */
-  if (TARGET_SAVE_RESTORE)
-    return riscv_leaf_function_p ();
+//  if (TARGET_SAVE_RESTORE)
+//    return riscv_leaf_function_p ();
 
   return true;
 }

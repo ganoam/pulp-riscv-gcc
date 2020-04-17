@@ -1030,4 +1030,31 @@ extern bool riscv_slow_unaligned_access;
 #define CONST_HIGH_PART(VALUE) (((VALUE) + (IMM_REACH/2)) & ~(IMM_REACH-1))
 #define CONST_LOW_PART(VALUE) ((VALUE) - CONST_HIGH_PART (VALUE))
 
+#define PUSH_POP_REG(x) ((x == 1) || (8 <= x && x <= 9) \
+		|| (18 <= x && x <= 27))
+#define PUSH_POP_A0(x) (x == 10)
+#define PUSH_POP_A1(x) (x == 11)
+
+
+/* str form for rcount in push and pop instruction
+   16--the total cases of str; 20--the max length of str.  */
+static const char push_pop_rcount_str[16][20] =
+{
+  "reserved",
+  "{ra}",
+  "{ra,s0}",
+  "{ra,s0-s1}",
+  "{ra,s0-s2}",
+  "{ra,s0-s3}",
+  "{ra,s0-s4}",
+  "{ra,s0-s5}",
+  "{ra,s0-s6}",
+  "{ra,s0-s7}",
+  "{ra,s0-s8}",
+  "{ra,s0-s9}",
+  "{ra,s0-s10}",
+  "{ra,s0-s11}",
+  "{ra,s0-s11,a0}",
+  "{ra,s0-s11,a0-a1}"};
+
 #endif /* ! GCC_RISCV_H */

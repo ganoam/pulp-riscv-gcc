@@ -127,6 +127,11 @@
   UNSPECV_FENCE
   UNSPECV_FENCE_I
 
+  ;; riscv push and pop.
+  UNSPECV_RISCV_PUSH
+  UNSPECV_RISCV_POP
+  UNSPECV_RISCV_POPRET
+
   ;; Hardware loops
   UNSPECV_ALLOC
   UNSPECV_LC_SET
@@ -8886,6 +8891,36 @@
 )
 
 
+;;
+;;  ....................
+;;
+;;      PUSH/POP
+;;
+;;  ....................
+
+
+(define_insn "riscv_push"
+  [(unspec_volatile [(match_operand 0 "const_int_operand")
+		     (match_operand 1 "immediate_operand")]
+    UNSPECV_RISCV_PUSH)]
+  ""
+  { return riscv_output_push (INTVAL (operands[0]), INTVAL (operands[1])); })
+
+
+(define_insn "riscv_pop"
+  [(unspec_volatile [(match_operand 0 "const_int_operand")
+		     (match_operand 1 "immediate_operand")]
+    UNSPECV_RISCV_POP)]
+  ""
+  { return riscv_output_pop (INTVAL (operands[0]), INTVAL (operands[1])); })
+
+
+(define_insn "riscv_popret"
+  [(unspec_volatile [(match_operand 0 "const_int_operand")
+		     (match_operand 1 "immediate_operand")]
+    UNSPECV_RISCV_POPRET)]
+  ""
+  { return riscv_output_popret (INTVAL (operands[0]), INTVAL (operands[1])); })
 
 
 (include "sync.md")

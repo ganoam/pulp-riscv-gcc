@@ -106,6 +106,11 @@ extern bool riscv_filter_pulp_operand(rtx, bool);
 extern bool riscv_is_tiny_symbol_p (rtx addr);
 extern void riscv_output_external (FILE *file, tree decl, const char *name);
 
+extern HOST_WIDE_INT riscv_get_push_pop_rcount (unsigned);
+extern const char *riscv_output_push (HOST_WIDE_INT, HOST_WIDE_INT);
+extern const char *riscv_output_pop (HOST_WIDE_INT, HOST_WIDE_INT);
+extern const char *riscv_output_popret (HOST_WIDE_INT, HOST_WIDE_INT);
+
 /* Routines implemented in riscv-c.c.  */
 void riscv_cpu_cpp_builtins (cpp_reader *);
 

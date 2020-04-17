@@ -190,9 +190,13 @@ msmall-data-limit=
 Target Joined Separate UInteger Var(g_switch_value) Init(8)
 -msmall-data-limit=N	Put global and static data smaller than <number> bytes into a special section (on some targets).
 
-msave-restore
-Target Report Mask(SAVE_RESTORE)
-Use smaller but slower prologue and epilogue code.
+;msave-restore
+;Target Report Mask(SAVE_RESTORE)
+;Use smaller but slower prologue and epilogue code.
+
+mpush-pop
+Target Report Mask(USE_PUSH_POP)
+Use push pop popret instruction, if msave-restore, mpush-pop invalid.
 
 mcmodel=
 Target Report RejectNegative Joined Enum(code_model) Var(riscv_cmodel) Init(TARGET_DEFAULT_CMODEL)
