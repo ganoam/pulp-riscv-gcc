@@ -3972,7 +3972,7 @@ riscv_save_reg_p (unsigned int regno, unsigned int is_it)
 static bool
 riscv_use_save_libcall (const struct riscv_frame_info *frame)
 {
-  if (/*!TARGET_SAVE_RESTORE || */crtl->calls_eh_return || frame_pointer_needed  || frame->is_it)
+  // if (!TARGET_SAVE_RESTORE || crtl->calls_eh_return || frame_pointer_needed  || frame->is_it)
     return false;
 
   return frame->save_libcall_adjustment != 0;
@@ -5028,18 +5028,18 @@ riscv_expand_epilogue (bool sibcall_p)
     emit_insn (gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx,
 			      EH_RETURN_STACKADJ_RTX));
 
+/* TODO CHECK 
   if (!sibcall_p) {
     if (frame->is_it) {
-      // if (Pulp_Cpu>=PULP_V2) {
               if      (frame->is_it & 0x2) emit_jump_insn (gen_simple_itu_return ());
               else if (frame->is_it & 0x4) emit_jump_insn (gen_simple_its_return ());
               else if (frame->is_it & 0x8) emit_jump_insn (gen_simple_ith_return ());
               else  emit_jump_insn (gen_simple_itm_return ());
-      // } else emit_jump_insn (gen_simple_it_return ());
-    } else // emit_jump_insn (gen_simple_return_internal (ra));
-        riscv_emit_pop_popret_insn (sibcall_p, riscv_use_push_pop,
- 		 push_pop_rcount, push_pop_spimm, insn, ra);
+    } else  emit_jump_insn (gen_simple_return_internal (ra));
   }
+*/
+  riscv_emit_pop_popret_insn (sibcall_p, riscv_use_push_pop,
+                 push_pop_rcount, push_pop_spimm, insn, ra);
 }
 
 /* Functions to save and restore machine-specific function data.  */
