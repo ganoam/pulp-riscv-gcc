@@ -124,6 +124,8 @@ static tree opaque_V2HI_type_node;
 static tree opaque_V2HF_type_node;
 static tree opaque_V2OHF_type_node;
 
+static tree integer_ptr_ptr_type_node;
+
 static unsigned int
 riscv_builtin_avail_riscv (void)
 {
@@ -586,6 +588,7 @@ static GTY(()) int riscv_builtin_decl_index[NUM_INSN_CODES];
 #define RISCV_ATYPE_POINTER ptr_type_node
 #define RISCV_ATYPE_CPOINTER const_ptr_type_node
 #define RISCV_ATYPE_INTPTR integer_ptr_type_node
+#define RISCV_ATYPE_INTPTRPTR integer_ptr_ptr_type_node
 
 /* Standard mode-based argument types.  */
 #define RISCV_ATYPE_UQI unsigned_intQI_type_node
@@ -704,6 +707,7 @@ riscv_init_builtins (void)
   (*lang_hooks.types.register_builtin_type) (fp8_type, "__fp8");
 */
 
+  integer_ptr_ptr_type_node    = build_pointer_type (integer_ptr_type_node);
   opaque_V4QI_type_node    = build_opaque_vector_type (intQI_type_node, 4);
   opaque_V2HI_type_node    = build_opaque_vector_type (intHI_type_node, 2);
 
@@ -822,10 +826,22 @@ riscv_prepare_builtin_arg (enum insn_code icode,
   tree arg;
   rtx value;
   enum machine_mode mode;
+  const char *insn_constraint;
 
   arg = CALL_EXPR_ARG (exp, argno);
-  value = expand_normal (arg);
+  insn_constraint = insn_data[icode].operand[opno].constraint;
   mode = insn_data[icode].operand[opno].mode;
+
+  
+//  if(*insn_constraint == '+') {
+   //   printf("CHEMINCHIAEEEEEE\n");
+      //value = expand_expr_real (arg, NULL_RTX, VOIDmode, EXPAND_WRITE, NULL, false);
+//      gen_move_insn(); 
+//  }
+//  else
+     value = expand_normal (arg);
+
+  if(side_effects_p(value)) printf("**** EVVIVA!!!\n");
   if (!insn_data[icode].operand[opno].predicate (value, mode))
     {
       /* We need to get the mode from ARG for two reasons:
@@ -848,6 +864,7 @@ riscv_prepare_builtin_arg (enum insn_code icode,
           return const0_rtx;
         }
     }
+
 
   return value;
 }
@@ -1000,6 +1017,10 @@ riscv_expand_builtin_direct (const struct riscv_builtin_description *d, int buil
     default:
       gcc_unreachable ();
     }
+//  if(icode == CODE_FOR_mlinitspr) 
+//	  emit_insn (gen_mlupdatespr(ops[0]));
+//  if(icode >= CODE_FOR_mlsdotuphv && icode <= CODE_FOR_mlsdotspcv) 
+//	  emit_insn (gen_mlupdatespr(ops[1]));
   PulpBuiltinGenPostExtract(&ExtraArg, ops[0]);
   return target;
 }

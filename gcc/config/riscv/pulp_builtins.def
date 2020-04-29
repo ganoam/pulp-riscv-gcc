@@ -425,7 +425,10 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(qntnv,               qnt8,            RISCV_INT_FTYPE_INT_INTPTR,                     pulp_nn, NULL)
   DIRECT_BUILTIN1(qntcv,               qnt16,           RISCV_INT_FTYPE_INT_INTPTR,                     pulp_nn, NULL)
 
-  DIRECT_NO_TARGET_BUILTIN1(mlinitspr,           mlinitspr,       RISCV_VOID_FTYPE_INTPTR_INT,                          pulp_nn, NULL)
+
+
+  DIRECT_BUILTIN1(mlinitspr,           mlinitspr,       RISCV_INTPTR_FTYPE_INTPTR_INT,                  pulp_nn, NULL)
+  DIRECT_BUILTIN1(mlupdatespr,         mlupdatespr,     RISCV_INTPTR_FTYPE_VOID,                        pulp_nn, NULL)
 
   DIRECT_BUILTIN1(mlsdotuphv,          mlsdotup2,       RISCV_INT_FTYPE_INTPTR_INT_INT_INT,             pulp_nn, NULL)
   DIRECT_BUILTIN1(mlsdotupbv,          mlsdotup4,       RISCV_INT_FTYPE_INTPTR_INT_INT_INT,             pulp_nn, NULL)
