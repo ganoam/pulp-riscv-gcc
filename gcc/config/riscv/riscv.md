@@ -8792,7 +8792,7 @@
 
 (define_insn "mlupdatespr"
   [
-    (unspec_volatile:SI [(match_operand:SI 0 "register_operand" "+r")] UNSPEC_MLSDOT)
+    (unspec:SI [(match_operand:SI 0 "register_operand" "+r")] UNSPEC_MLSDOT)
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
 )
