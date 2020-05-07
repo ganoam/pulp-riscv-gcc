@@ -5790,6 +5790,14 @@ hwloop_optimize (hwloop_info loop)
       return false;
     }
 
+
+  /* Never include jumps or conditional branches inside a HW loop! */
+
+  last_insn = PREV_INSN (loop->loop_end);
+  for (; last_insn != BB_HEAD (bb); last_insn = PREV_INSN (last_insn))
+      if(JUMP_P (last_insn) && !any_condjump_p (last_insn)) return false;
+
+
   /* There should be an instruction before the loop_end instruction
      in the same basic block. And the instruction must not be
      - JUMP
@@ -5805,7 +5813,6 @@ hwloop_optimize (hwloop_info loop)
   while (1)
     {
       for (; last_insn != BB_HEAD (bb); last_insn = PREV_INSN (last_insn)) {
-	        //printf("*** %d\n", INSN_CODE(last_insn));
 		if(INSN_CODE(last_insn) == CODE_FOR_mlupdatespr) continue;
 		if (NONDEBUG_INSN_P (last_insn)) break;
 		{
