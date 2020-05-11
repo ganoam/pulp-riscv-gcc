@@ -5622,6 +5622,9 @@ riscv_invalid_within_doloop (const rtx_insn *insn)
   if (JUMP_P (insn) && INSN_CODE (insn) == CODE_FOR_return)
     return "Return from a call instruction in the loop.";
 
+  if(JUMP_P (insn) || any_condjump_p (insn))
+    return "Inner jump in the loop";  
+
   return NULL;
 }
 
@@ -5791,13 +5794,6 @@ hwloop_optimize (hwloop_info loop)
     }
 
 
-  /* Never include jumps or conditional branches inside a HW loop! */
-
-  last_insn = PREV_INSN (loop->loop_end);
-  for (; last_insn != BB_HEAD (bb); last_insn = PREV_INSN (last_insn))
-      if(JUMP_P (last_insn) && !any_condjump_p (last_insn)) return false;
-
-
   /* There should be an instruction before the loop_end instruction
      in the same basic block. And the instruction must not be
      - JUMP
@@ -5930,8 +5926,7 @@ hwloop_optimize (hwloop_info loop)
 		loop->length += 1;
   	}
   }
-  loop->last_insn = last_insn;
-
+  loop->last_insn = last_insn; 
   /* The loop is good for replacement.  */
   start_label = loop->start_label;
   end_label = gen_label_rtx ();
