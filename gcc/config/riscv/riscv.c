@@ -367,7 +367,7 @@ static const struct riscv_tune_info optimize_size_tune_info = {
 
 /* A table describing all the processors GCC knows about.  */
 static const struct riscv_cpu_info riscv_cpu_info_table[] = {
-  { "marsellus0", marsellus0, &rocket_tune_info },	
+  { "marsellus0", marsellus0, &rocket_tune_info },
   { "marsellus1", marsellus1, &rocket_tune_info },
   { "marsellus2", marsellus2, &rocket_tune_info },
   { "marsellus3", marsellus3, &rocket_tune_info },
@@ -2326,7 +2326,7 @@ riscv_emit_int_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 
   *op0 = force_reg (word_mode, *op0);
   if (*op1 != const0_rtx) {
-     if (!((Pulp_Cpu>=PULP_V2) && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) && (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15))) 
+     if (!((Pulp_Cpu>=PULP_V2) && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) && (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15)))
     	*op1 = force_reg (word_mode, *op1);
   }
 }
@@ -3951,7 +3951,7 @@ riscv_save_reg_p (unsigned int regno, unsigned int is_it)
                        || (regno == HARD_FRAME_POINTER_REGNUM
                            && frame_pointer_needed);
   // bool it_rel = is_it && df_regs_ever_live_p(regno) && scan_reg_definitions(regno);
-  bool it_rel = is_it && df_regs_ever_live_p(regno); 
+  bool it_rel = is_it && df_regs_ever_live_p(regno);
   /*
   if ((call_saved && might_clobber)
          || (regno == RETURN_ADDR_REGNUM && crtl->calls_eh_return)
@@ -4542,7 +4542,7 @@ riscv_expand_prologue (void)
   unsigned mask = frame->mask;
   HOST_WIDE_INT push_pop_rcount = riscv_use_push_pop_judge (frame);
   HOST_WIDE_INT push_pop_spimm = 0;
-  HOST_WIDE_INT push_pop_sp16imm = 0;  
+  HOST_WIDE_INT push_pop_sp16imm = 0;
   rtx insn;
   static bool Trace=false;
 
@@ -4572,7 +4572,7 @@ riscv_expand_prologue (void)
       REG_NOTES (insn) = dwarf;
     }
 
-  /* the save_libcall_adjustment is the size for gpr. 
+  /* the save_libcall_adjustment is the size for gpr.
      undo push when the value is 0.  */
   else if (push_pop_rcount && frame->save_libcall_adjustment)
     {
@@ -4824,7 +4824,7 @@ riscv_set_current_function (tree decl)
         	for (i=1; i<32; i++) if (call_used_regs[i]) fprintf(stderr, " %d", i);
 		fprintf(stderr, "\n");
 	}
-	
+
 }
 
 
@@ -4857,7 +4857,7 @@ riscv_expand_epilogue (bool sibcall_p)
   HOST_WIDE_INT push_pop_rcount = riscv_use_push_pop_judge (frame);
   HOST_WIDE_INT push_pop_spimm = 0;
   HOST_WIDE_INT push_pop_sp16imm = 0;
-  bool riscv_use_push_pop = false;  
+  bool riscv_use_push_pop = false;
   bool use_restore_libcall = !sibcall_p && riscv_use_save_libcall (frame);
   rtx ra = gen_rtx_REG (Pmode, RETURN_ADDR_REGNUM);
   rtx insn;
@@ -4986,12 +4986,12 @@ riscv_expand_epilogue (bool sibcall_p)
       gcc_assert (step2 >= frame->save_libcall_adjustment);
       step2 -= frame->save_libcall_adjustment;
       /* Opcode for sp16imm is 5 bits, the push_pop_sp16imm is 0 - 31.  */
-      if (riscv_use_push_pop && frame->fmask == 0 
+      if (riscv_use_push_pop && frame->fmask == 0
 				&& push_pop_sp16imm >= 0 && push_pop_sp16imm <= 31)
       {
         step2 = 0;
       }
-      
+
     }
 
   if (need_barrier_p)
@@ -5028,7 +5028,7 @@ riscv_expand_epilogue (bool sibcall_p)
     emit_insn (gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx,
 			      EH_RETURN_STACKADJ_RTX));
 
-/* TODO CHECK 
+/* TODO CHECK
   if (!sibcall_p) {
     if (frame->is_it) {
               if      (frame->is_it & 0x2) emit_jump_insn (gen_simple_itu_return ());
@@ -5622,9 +5622,6 @@ riscv_invalid_within_doloop (const rtx_insn *insn)
   if (JUMP_P (insn) && INSN_CODE (insn) == CODE_FOR_return)
     return "Return from a call instruction in the loop.";
 
-  if(JUMP_P (insn) || any_condjump_p (insn))
-    return "Inner jump in the loop";  
-
   return NULL;
 }
 
@@ -5682,9 +5679,9 @@ hwloop_optimize (hwloop_info loop)
 	fprintf(dump_file, "head         : bb%d\n", loop->head->index);
 	fprintf(dump_file, "incoming_src : bb%d\n", loop->incoming_src?loop->incoming_src->index:-5555);
 	fprintf(dump_file, "incoming_dest: bb%d\n", loop->incoming_dest?loop->incoming_dest->index:-5555);
-	for (i = 0; vec_safe_iterate(loop->incoming, i, &e); i++) 
+	for (i = 0; vec_safe_iterate(loop->incoming, i, &e); i++)
 		fprintf(dump_file, " Incoming: src= bb%4d, dest= bb%4d, Edge is: %s\n", e->src->index, e->dest->index, (e->flags & EDGE_FALLTHRU)?"Fall Through":"Branch");
-	
+
   }
   if (loop->depth > MAX_LOOP_DEPTH)
     {
@@ -5793,7 +5790,6 @@ hwloop_optimize (hwloop_info loop)
       return false;
     }
 
-
   /* There should be an instruction before the loop_end instruction
      in the same basic block. And the instruction must not be
      - JUMP
@@ -5809,7 +5805,8 @@ hwloop_optimize (hwloop_info loop)
   while (1)
     {
       for (; last_insn != BB_HEAD (bb); last_insn = PREV_INSN (last_insn)) {
-		if(INSN_CODE(last_insn) == CODE_FOR_mlupdatespr) continue;
+	        //printf("*** %d\n", INSN_CODE(last_insn));
+		if(INSN_CODE(last_insn) == CODE_FOR_mlupdatespr || INSN_CODE(last_insn) == CODE_FOR_mlupdatespr_v3) continue;
 		if (NONDEBUG_INSN_P (last_insn)) break;
 		{
 			/* Check if this insn could be a loop_end of an enclosed loop */
@@ -5926,7 +5923,8 @@ hwloop_optimize (hwloop_info loop)
 		loop->length += 1;
   	}
   }
-  loop->last_insn = last_insn; 
+  loop->last_insn = last_insn;
+
   /* The loop is good for replacement.  */
   start_label = loop->start_label;
   end_label = gen_label_rtx ();
@@ -5987,7 +5985,7 @@ hwloop_optimize (hwloop_info loop)
 							single_def_iter = NULL; break;
 						}
 					}
-					
+
 				}
 			if (!single_def_iter) {
 				if (dump_file) {
@@ -6083,7 +6081,7 @@ hwloop_optimize (hwloop_info loop)
 	} else {
 		/* Use short form:
 			lp.counti level, end_label, iter_reg
-			
+
 			immediate(iter_reg) and 0 <= imm_value <= 2047 and loop->length <= 31
 				we can use lp.counti level, loop_end, imm_value
 		*/
@@ -6290,7 +6288,7 @@ static void riscv_patch_generated_code()
 {
 	/* Look for pattern
 				1) set RegW = Mem()
-				2) JumpCond	
+				2) JumpCond
 		FallThrough:	3) Call RegR
 
 		With RegR = RegW, if found insert a nop after  1)
@@ -6324,7 +6322,7 @@ static void riscv_patch_generated_code()
 			}
 		}
 		if (!TargetBB) continue;
-		
+
 		end = BB_END(TargetBB);
       		for (insn = BB_HEAD(TargetBB); ; insn = NEXT_INSN (insn)) {
 			if ((!DEBUG_INSN_P (insn)&&!NOTE_P(insn)) || (insn == end)) break;
@@ -6340,8 +6338,8 @@ static void riscv_patch_generated_code()
 		if (REGNO(RegW) != REGNO(RegR)) continue;
 
 		prev_insn = emit_insn_after (gen_forced_nop (), prev_insn);
-		
-		
+
+
 	}
 
 }
