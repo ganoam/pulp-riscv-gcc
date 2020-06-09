@@ -8945,7 +8945,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.mlsdotup.h \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotup.h \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -8997,7 +8997,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.mlsdotup.<allint_vec_size> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotup.<allint_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9041,7 +9041,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.mlsdotusp.<allint_vec_size> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotusp.<allint_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9085,7 +9085,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.mlsdotsup.<allint_vec_size> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotsup.<allint_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9129,7 +9129,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.mlsdotsp.<allint_vec_size> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotsp.<allint_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
