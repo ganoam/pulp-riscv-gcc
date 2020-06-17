@@ -111,6 +111,11 @@
 
   UNSPEC_BITREV
 
+  ;; PulpNN v2
+  UNSPEC_MLSDOT
+
+  ;; PulpNN v3
+  UNSPEC_MLSDOT_V3
 ])
 
 (define_c_enum "unspecv" [
@@ -160,6 +165,11 @@
   ;; Read write CSR
   UNSPECV_SPR_READ_VOL
 
+  ;; PulpNN v2
+  UNSPECV_MLSDOT_INIT
+
+  ;; PulpNN v3
+  UNSPECV_MLSDOT_INIT_V3
 ])
 
 (define_constants
@@ -8762,25 +8772,20 @@
 ;; PulpNN Extension v2
 ;;
 
-(define_c_enum "unspec_nn_v2" [
-  UNSPEC_MLSDOT_INIT
-  UNSPEC_MLSDOT
-])
-
 (define_mode_iterator VMODESALLINT   [HV BV CV NV])
 (define_mode_attr allint_vec_size   [(HV "h")  (BV "b") (CV "c")  (NV "n")])
 
 
 (define_insn "mlinitspr"
-[ (unspec_volatile:SI [
-     (set (match_operand:SI 0 "register_operand" "=r")
+[  (set (match_operand:SI 0 "register_operand" "=r")
+     (unspec_volatile:SI [
         (plus:SI
           (match_operand:SI 1 "register_operand" "0")
           (parallel [(const_int 1)])
         )
-     )
-     (use:SI (match_operand:SI 2 "immediate_operand" "L"))
-] UNSPEC_MLSDOT_INIT)
+     ] UNSPECV_MLSDOT_INIT)
+   )
+   (use:SI (match_operand:SI 2 "immediate_operand" "L"))
 
 ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
@@ -8792,7 +8797,9 @@
 
 (define_insn "mlupdatespr"
   [
-    (unspec:SI [(match_operand:SI 0 "register_operand" "+r")] UNSPEC_MLSDOT)
+    (set (match_operand:SI 0 "register_operand" "+r")
+      (unspec_volatile:SI [(match_dup 0)] UNSPECV_MLSDOT_INIT)
+    )
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
 )
@@ -8914,25 +8921,20 @@
 ;; PulpNN Extension v3
 ;;
 
-(define_c_enum "unspec_nn_v3" [
-  UNSPEC_MLSDOT_INIT_V3
-  UNSPEC_MLSDOT_V3
-])
-
-
 (define_insn "mlinitspr_v3"
-[ (unspec_volatile:SI [
+[
      (set (match_operand:SI 0 "register_operand" "=r")
-        (plus:SI
-          (match_operand:SI 5 "register_operand" "0")
-          (parallel [(const_int 1)])
-        )
+       (unspec_volatile:SI [
+         (plus:SI
+           (match_operand:SI 5 "register_operand" "0")
+           (parallel [(const_int 1)])
+         )
+        ] UNSPECV_MLSDOT_INIT_V3)
      )
      (use:SI (match_operand:SI 1 "immediate_operand" "L"))
      (use:SI (match_operand:SI 2 "immediate_operand" "L"))
      (use:SI (match_operand:SI 3 "immediate_operand" "L"))
      (use:SI (match_operand:SI 4 "immediate_operand" "L"))     
-] UNSPEC_MLSDOT_INIT_V3)
 ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
 {
@@ -8955,7 +8957,9 @@
 
 (define_insn "mlupdatespr_v3"
   [
-    (unspec:SI [(match_operand:SI 0 "register_operand" "+r")] UNSPEC_MLSDOT_V3)
+    (set (match_operand:SI 0 "register_operand" "+r")
+      (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r")] UNSPECV_MLSDOT_INIT_V3)
+    )
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
 )
@@ -9099,7 +9103,7 @@
     (use:SI (match_operand:SI 2 "immediate_operand" "L"))
     (use:SI (match_operand:SI 3 "immediate_operand" "L"))
     (use:SI (match_operand:SI 4 "immediate_operand" "L"))  
-    (unspec:SI [(post_inc:SI (match_operand:SI 5 "register_operand" "+r"))] UNSPEC_MLSDOT_V3)
+    (unspec:SI [(match_operand:SI 5 "register_operand" "+r")] UNSPEC_MLSDOT_V3)
     (parallel[
       (set (match_operand:SI 0 "register_operand" "=r")
            (plus:SI

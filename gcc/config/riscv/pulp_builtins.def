@@ -452,7 +452,7 @@ Currently these macros are used in 2 contexts:
 
 
   DIRECT_BUILTIN1(mlinitspr_v3,           mlinitspr_v3,       RISCV_INTPTR_FTYPE_INT_INT_INT_INT_INTPTR,                  pulp_nn, CheckBuiltin)
-  DIRECT_BUILTIN1(mlupdatespr_v3,         mlupdatespr_v3,     RISCV_INTPTR_FTYPE_VOID,                        pulp_nn, NULL)
+  DIRECT_BUILTIN1(mlupdatespr_v3,         mlupdatespr_v3,     RISCV_INTPTR_FTYPE_INTPTR,                        pulp_nn, NULL)
 
   DIRECT_BUILTIN1(mlsdotuphv_v3,          mlsdotup2_v3,       RISCV_INT_FTYPE_INT_INT_INT_INT_INTPTR_INT,             pulp_nn, CheckBuiltin)
   DIRECT_BUILTIN1(mlsdotupbv_v3,          mlsdotup4_v3,       RISCV_INT_FTYPE_INT_INT_INT_INT_INTPTR_INT,             pulp_nn, CheckBuiltin)
