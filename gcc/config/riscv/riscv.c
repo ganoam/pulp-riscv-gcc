@@ -5790,6 +5790,15 @@ hwloop_optimize (hwloop_info loop)
       return false;
     }
 
+
+  /* Never include jumps or conditional branches inside a HW loop! */
+
+  bb=loop->head;
+  last_insn = PREV_INSN (loop->loop_end);
+  for (; last_insn != BB_HEAD (bb); last_insn = PREV_INSN (last_insn))
+      if(JUMP_P (last_insn) || any_condjump_p (last_insn)) return false;
+
+
   /* There should be an instruction before the loop_end instruction
      in the same basic block. And the instruction must not be
      - JUMP
